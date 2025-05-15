@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { PropsWithChildren } from 'react';
-import MoodMatcher from '@/components/MoodMatcher';
+import MoodMatcher from '@/components/MoodMatcherWrapper';
 
 type MoodMatcherContextType = {
   isVisible: boolean;
