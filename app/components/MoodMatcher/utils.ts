@@ -7,7 +7,7 @@ export interface AnimeItem {
   title: string;
   cover_image?: string;
   image_url?: string;
-  score?: number;
+  rating?: number;
   release_year?: number;
   genres?: string[];
 }
@@ -209,7 +209,7 @@ export async function getMoodBasedRecommendations(
     const { data: animeData, error: animeError } = await supabase
       .from('anime')
       .select('*')
-      .order('score', { ascending: false })
+      .order('rating', { ascending: false })
       .limit(100);
     
     if (animeError) {
@@ -251,7 +251,10 @@ export async function getMoodBasedRecommendations(
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            inputs: textsToEmbed,
+            inputs: {
+              source_sentence: `A ${mood} anime`,
+              sentences: animeTitles
+            }
           }),
         });
         
@@ -261,23 +264,15 @@ export async function getMoodBasedRecommendations(
         
         const embeddings = await response.json();
         
-        if (!Array.isArray(embeddings) || embeddings.length !== textsToEmbed.length) {
+        if (!Array.isArray(embeddings)) {
           throw new Error('Invalid response format from API');
         }
         
-        // Get the mood embedding (last item in the array)
-        const moodEmbedding = embeddings[embeddings.length - 1];
-        
-        // Calculate similarity between each anime title and the mood
-        const animeWithSimilarity = animeData.map((anime, index) => {
-          const animeEmbedding = embeddings[index];
-          const similarity = calculateCosineSimilarity(animeEmbedding, moodEmbedding);
-          
-          return {
-            ...anime,
-            similarity
-          };
-        });
+        // The API now returns similarity scores directly
+        const animeWithSimilarity = animeData.map((anime, index) => ({
+          ...anime,
+          similarity: embeddings[index]
+        }));
         
         // Sort by similarity (highest first)
         const sortedAnime = animeWithSimilarity.sort((a, b) => b.similarity - a.similarity);
@@ -296,7 +291,7 @@ export async function getMoodBasedRecommendations(
             title: anime.title,
             cover_image: anime.cover_image,
             image_url: anime.image_url,
-            score: anime.score,
+            rating: anime.rating,
             release_year: anime.release_year,
             genres: anime.genres
           })), 
@@ -346,7 +341,7 @@ export async function getMoodBasedRecommendations(
       const normalizedScore = genreScore / targetGenres.length;
       
       // Combine with anime rating (if available)
-      const ratingFactor = anime.score ? anime.score / 10 : 0.5;
+      const ratingFactor = anime.rating ? anime.rating / 10 : 0.5;
       
       // Final score is weighted combination
       const finalScore = (normalizedScore * 0.7) + (ratingFactor * 0.3);
@@ -372,7 +367,7 @@ export async function getMoodBasedRecommendations(
         title: anime.title,
         cover_image: anime.cover_image,
         image_url: anime.image_url,
-        score: anime.score,
+        rating: anime.rating,
         release_year: anime.release_year,
         genres: anime.genres
       })), 
