@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -29,32 +29,201 @@ import {
 } from "lucide-react-native";
 import { useTheme } from "@/context/ThemeProvider";
 import { useAuth } from "@/context/AuthContext";
-import useNotifications, { Notification } from "@/hooks/useNotifications";
 import Header from "@/components/Header";
-import { supabase } from "@/lib/supabase";
+
+// Define Notification interface
+interface Notification {
+  id: string;
+  user_id: string | null;
+  type: string;
+  content: string;
+  read: boolean;
+  created_at: string;
+  title?: string;
+  message?: string;
+  link?: string;
+  image?: string;
+}
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const { colors, isDarkMode } = useTheme();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("notifications");
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Mock notification data
+  const mockNotifications: Notification[] = [
+    {
+      id: '1',
+      user_id: null,
+      type: 'new_anime',
+      content: 'Шинэ аниме нэмэгдлээ: Death Note аниме манай системд нэмэгдлээ',
+      read: false,
+      created_at: new Date().toISOString(),
+      title: 'Шинэ аниме нэмэгдлээ',
+      message: 'Death Note аниме манай системд нэмэгдлээ'
+    },
+    {
+      id: '2',
+      user_id: null,
+      type: 'update',
+      content: 'Таны дуртай аниме шинэчлэгдлээ: Attack on Titan-ны шинэ анги гарлаа',
+      read: false,
+      created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
+      title: 'Аниме шинэчлэгдлээ',
+      message: 'Attack on Titan-ны шинэ анги гарлаа'
+    },
+    {
+      id: '3',
+      user_id: null,
+      type: 'system',
+      content: 'Шинэ сэтгэгдэл: Системийн шинэчлэлт хийгдлээ',
+      read: false,
+      created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
+      title: 'Системийн мэдэгдэл',
+      message: 'Системийн шинэчлэлт хийгдлээ'
+    },
+    {
+      id: '4',
+      user_id: null,
+      type: 'system',
+      content: 'Системийн мэдэгдэл: Манай систем засвартай байх тул түр хүлээнэ үү',
+      read: true,
+      created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), // 3 days ago
+      title: 'Системийн мэдэгдэл',
+      message: 'Манай систем засвартай байх тул түр хүлээнэ үү'
+    },
+    {
+      id: '5',
+      user_id: null,
+      type: 'system',
+      content: 'Шинэ функц: Mood Matcher системд нэмэгдлээ',
+      read: true,
+      created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(), // 4 days ago
+      title: 'Шинэ функц',
+      message: 'Mood Matcher системд нэмэгдлээ'
+    }
+  ];
+
+  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+
+  // Calculate unread count
+  const unreadCount = notifications.filter(notification => !notification.read).length;
+  
+  // Fetch notifications (just resets the mock data)
+  const fetchNotifications = useCallback(async () => {
+    console.log('Fetching mock notifications');
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Reset to mock data
+      setNotifications(mockNotifications);
+      console.log('Mock notifications loaded:', mockNotifications.length);
+    } catch (err) {
+      console.error('Error in mock notifications:', err);
+      setError('Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Mark notification as read
+  const markAsRead = useCallback(async (id: string) => {
+    console.log('Marking notification as read:', id);
+    
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Update notification state
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notification =>
+          notification.id === id ? { ...notification, read: true } : notification
+        )
+      );
+      
+      console.log('Successfully marked notification as read');
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+      setError('Failed to update notification');
+    }
+  }, []);
+  
+  // Mark all notifications as read
+  const markAllAsRead = useCallback(async () => {
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Update all notifications
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notification => ({ ...notification, read: true }))
+      );
+      
+      console.log('All notifications marked as read');
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err);
+      setError('Failed to update notifications');
+    }
+  }, []);
+  
+  // Delete a notification
+  const deleteNotification = useCallback(async (id: string) => {
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Remove notification from state
+      setNotifications(prevNotifications =>
+        prevNotifications.filter(notification => notification.id !== id)
+      );
+      
+      console.log('Notification deleted:', id);
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+      setError('Failed to delete notification');
+    }
+  }, []);
+  
+  // Clear all notifications
+  const clearAll = useCallback(async () => {
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Clear notifications
+      setNotifications([]);
+      
+      console.log('All notifications cleared');
+    } catch (err) {
+      console.error('Error clearing notifications:', err);
+      setError('Failed to clear notifications');
+    }
+  }, []);
 
   // Animation values for notification items
   const fadeAnims = React.useRef<{[key: string]: Animated.Value}>({});
   const translateYAnims = React.useRef<{[key: string]: Animated.Value}>({});
 
-  // Initialize animation values for a notification
-  const initializeAnimation = (id: string) => {
-    if (!fadeAnims.current[id]) {
-      fadeAnims.current[id] = new Animated.Value(0);
-      translateYAnims.current[id] = new Animated.Value(20);
-    }
-  };
-
+  // Initialize animation values for each notification
+  useEffect(() => {
+    notifications.forEach(notification => {
+      if (!fadeAnims.current[notification.id]) {
+        fadeAnims.current[notification.id] = new Animated.Value(0);
+        translateYAnims.current[notification.id] = new Animated.Value(20);
+      }
+    });
+  }, [notifications]);
+  
+  // This section intentionally left empty - we'll use the handleRefresh function defined below
+  
   // Animate a notification
   const animateNotification = (id: string, index: number) => {
     Animated.parallel([
@@ -72,56 +241,43 @@ export default function NotificationsScreen() {
       }),
     ]).start();
   };
+  
+  // Initialize animation for a single notification
+  const initializeAnimation = (id: string) => {
+    if (!fadeAnims.current[id]) {
+      fadeAnims.current[id] = new Animated.Value(0);
+      translateYAnims.current[id] = new Animated.Value(20);
+    }
+  };
 
   // Fetch notifications on component mount
   useEffect(() => {
+    console.log('NotificationsScreen mounted, fetching notifications...');
     fetchNotifications();
-  }, [user]);
-
-  // Fetch notifications from Supabase
-  const fetchNotifications = async () => {
-    setLoading(true);
-    if (!user) {
-      setNotifications([]);
-      setUnreadCount(0);
-      setLoading(false);
-      setRefreshing(false);
-      return;
+  }, [fetchNotifications]);
+  
+  // Debug notifications
+  useEffect(() => {
+    console.log('Notifications in component:', notifications.length);
+    if (notifications.length > 0) {
+      console.log('First notification in component:', notifications[0]);
     }
-    try {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (error) {
-        throw error;
-      }
-      setNotifications(data || []);
-      setUnreadCount((data || []).filter((n) => !n.read).length);
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-      Alert.alert("Error", "Failed to fetch notifications");
-      setNotifications([]);
-      setUnreadCount(0);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  }, [notifications]);
 
   // Handle refresh
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchNotifications();
-
-    // Add haptic feedback
-    try {
-      const Haptics = require("expo-haptics");
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
-      // Haptics not available, continue silently
-    }
+    fetchNotifications().finally(() => {
+      setRefreshing(false);
+      
+      // Add haptic feedback
+      try {
+        const Haptics = require("expo-haptics");
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (error) {
+        // Haptics not available, continue silently
+      }
+    });
   };
 
   // Handle notification press
@@ -136,32 +292,14 @@ export default function NotificationsScreen() {
 
     // Mark as read
     if (!notification.read) {
-      setNotifications((prevNotifications) =>
-        prevNotifications.map((item) =>
-          item.id === notification.id ? { ...item, read: true } : item,
-        ),
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      await markAsRead(notification.id);
     }
 
-    // Navigate to related content if available
-    if (notification.link) {
-      Alert.alert(
-        "Anime Details",
-        `View details for anime ID: ${notification.link?.split('/').pop()}?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "View",
-            onPress: () =>
-              console.log(`Navigate to anime ID: ${notification.link?.split('/').pop()}`),
-          },
-        ],
-      );
-    } else {
-      // Just show the notification content
-      Alert.alert(notification.title, notification.message);
-    }
+    // Display notification content in an alert
+    const title = notification.title || notification.type || 'Notification';
+    const message = notification.content || '';
+    
+    Alert.alert(title, message);
   };
 
   // Handle mark all as read
@@ -179,11 +317,7 @@ export default function NotificationsScreen() {
       // Haptics not available, continue silently
     }
 
-    setNotifications((prevNotifications) =>
-      prevNotifications.map((item) => ({ ...item, read: true })),
-    );
-    setUnreadCount(0);
-
+    await markAllAsRead();
     Alert.alert("Success", "All notifications marked as read");
   };
 
@@ -205,14 +339,7 @@ export default function NotificationsScreen() {
               // Haptics not available, continue silently
             }
 
-            const notificationToDelete = notifications.find((n) => n.id === id);
-            if (notificationToDelete && !notificationToDelete.read) {
-              setUnreadCount((prev) => Math.max(0, prev - 1));
-            }
-
-            setNotifications((prevNotifications) =>
-              prevNotifications.filter((item) => item.id !== id),
-            );
+            await deleteNotification(id);
           },
           style: "destructive",
         },
@@ -268,23 +395,18 @@ export default function NotificationsScreen() {
     item: Notification;
     index: number;
   }) => {
+    // Initialize animation without using hooks
     initializeAnimation(item.id);
+    // Immediately animate the notification without using useEffect
     animateNotification(item.id, index);
-
+    
     return (
       <Animated.View
         style={[
           styles.notificationItem,
           {
             backgroundColor: item.read ? colors.card : colors.cardHover,
-            borderLeftColor:
-              item.type === "info"
-                ? colors.info
-                : item.type === "release"
-                  ? colors.primary
-                  : item.type === "update"
-                    ? colors.warning
-                    : colors.error,
+            borderLeftColor: getNotificationColor(item.type, colors),
             opacity: fadeAnims.current[item.id],
             transform: [{ translateY: translateYAnims.current[item.id] }],
           },
@@ -303,18 +425,17 @@ export default function NotificationsScreen() {
             <View style={styles.notificationHeader}>
               <Text
                 style={[styles.notificationTitle, { color: colors.text }]}
-                numberOfLines={1}
               >
-                {item.title}
+                {item.title || item.type}
               </Text>
-
+              
               <Text
                 style={[
                   styles.notificationTime,
                   { color: colors.textSecondary },
                 ]}
               >
-                {formatRelativeTime(item.timestamp)}
+                {formatRelativeTime(item.created_at)}
               </Text>
             </View>
 
@@ -325,7 +446,7 @@ export default function NotificationsScreen() {
               ]}
               numberOfLines={2}
             >
-              {item.message}
+              {item.content}
             </Text>
           </View>
         </TouchableOpacity>
@@ -337,16 +458,7 @@ export default function NotificationsScreen() {
                 styles.actionButton,
                 { backgroundColor: colors.success + "20" },
               ]}
-              onPress={() => {
-                setNotifications((prevNotifications) =>
-                  prevNotifications.map((notification) =>
-                    notification.id === item.id
-                      ? { ...notification, read: true }
-                      : notification,
-                  ),
-                );
-                setUnreadCount((prev) => Math.max(0, prev - 1));
-              }}
+              onPress={() => markAsRead(item.id)}
             >
               <Check size={16} color={colors.success} />
             </TouchableOpacity>
@@ -365,33 +477,22 @@ export default function NotificationsScreen() {
       </Animated.View>
     );
   };
-
-  // Render empty state
-  const renderEmptyComponent = () => {
-    if (loading) {
-      return (
-        <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Loading notifications...
-          </Text>
-        </View>
-      );
+  
+  // Function to get notification color based on type
+  const getNotificationColor = (type: string, colors: any) => {
+    switch (type) {
+      case 'success':
+        return colors.success;
+      case 'error':
+        return colors.error;
+      case 'warning':
+        return colors.warning;
+      case 'info':
+      default:
+        return colors.primary;
     }
-
-    return (
-      <View style={styles.emptyContainer}>
-        <Bell size={48} color={colors.textSecondary} style={{ opacity: 0.5 }} />
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          No New Notifications
-        </Text>
-        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-          You're all caught up! We'll notify you when there's something new.
-        </Text>
-      </View>
-    );
   };
-
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar
@@ -427,13 +528,47 @@ export default function NotificationsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Debug Info - Remove in production */}
+        {loading ? (
+          <View style={{padding: 16}}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{textAlign: 'center', marginTop: 8, color: colors.text}}>
+              Loading notifications...
+            </Text>
+          </View>
+        ) : error ? (
+          <View style={{padding: 16}}>
+            <Text style={{textAlign: 'center', color: colors.error}}>
+              {error}
+            </Text>
+            <TouchableOpacity 
+              style={{marginTop: 16, alignSelf: 'center', padding: 8, backgroundColor: colors.primary, borderRadius: 8}}
+              onPress={() => fetchNotifications()}
+            >
+              <Text style={{color: '#fff'}}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        
         {/* Notifications List */}
         <FlatList
           data={notifications}
           renderItem={renderNotificationItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={renderEmptyComponent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Bell size={48} color={colors.textSecondary} />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                {loading ? 'Loading...' : 'No notifications'}
+              </Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                {loading 
+                  ? 'Please wait while we fetch your notifications' 
+                  : 'You don\'t have any notifications yet. Check back later!'}
+              </Text>
+            </View>
+          }
           onRefresh={handleRefresh}
           refreshing={refreshing}
           showsVerticalScrollIndicator={false}
@@ -551,3 +686,4 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+
