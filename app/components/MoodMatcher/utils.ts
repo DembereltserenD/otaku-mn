@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface AnimeItem {
-  id: number;
+  id: string; // Changed to string to match UUID format in database
   title: string;
-  cover_image?: string;
   image_url?: string;
+  cover_image_url?: string; // Updated to match database field name
   rating?: number;
   release_year?: number;
   genres?: string[];

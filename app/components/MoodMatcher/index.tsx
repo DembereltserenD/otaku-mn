@@ -176,7 +176,7 @@ const MoodMatcher = ({ isVisible, onClose }: MoodMatcherProps) => {
     }
   };
   
-  const handleAnimePress = (animeId: number) => {
+  const handleAnimePress = (animeId: string) => {
     onClose();
     router.push(`/anime/${animeId}`);
   };

@@ -10,7 +10,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Bell, Home, Bot } from "lucide-react-native";
+import { ArrowLeft, Bell, Home, Bot, Shield } from "lucide-react-native";
 import { useTheme } from "@/context/ThemeProvider";
 import Typography from "./Typography";
 import { useToast } from "@/context/ToastContext";
@@ -24,11 +24,13 @@ interface HeaderProps {
   showMenu?: boolean;
   showHome?: boolean;
   showMoodMatcher?: boolean;
+  showAdmin?: boolean;
   onMenuPress?: () => void;
   onSearchPress?: () => void;
   onNotificationsPress?: () => void;
   onHomePress?: () => void;
   onMoodMatcherPress?: () => void;
+  onAdminPress?: () => void;
   transparent?: boolean;
   scrollOffset?: Animated.Value;
   subtitle?: string;
@@ -49,11 +51,13 @@ const Header = ({
   showMenu = false,
   showHome = false,
   showMoodMatcher = true,
+  showAdmin = false,
   onMenuPress,
   onSearchPress,
   onNotificationsPress,
   onHomePress,
   onMoodMatcherPress,
+  onAdminPress,
   transparent = false,
   scrollOffset,
   subtitle,
@@ -177,6 +181,17 @@ const Header = ({
       }
     });
   };
+  
+  // Handle admin button press
+  const handleAdminPress = () => {
+    handleButtonPress(() => {
+      if (onAdminPress) {
+        onAdminPress();
+      } else {
+        router.push("/admin");
+      }
+    });
+  };
 
   return (
     <>
@@ -270,6 +285,24 @@ const Header = ({
                   </TouchableOpacity>
                 </Animated.View>
               )}
+              {showAdmin && (
+                <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                  <TouchableOpacity
+                    onPress={handleAdminPress}
+                    style={[
+                      styles.iconButton,
+                      { backgroundColor: colors.cardHover },
+                    ]}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Admin Panel"
+                    activeOpacity={0.7}
+                  >
+                    <Shield size={20} color={colors.error} />
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
+
               {showNotifications && (
                 <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
                   <TouchableOpacity

@@ -9,7 +9,7 @@ interface MoodResultsProps {
   recommendations: AnimeItem[];
   selectedMood: string | null;
   customMood: string;
-  onAnimePress: (animeId: number) => void;
+  onAnimePress: (animeId: string) => void;
   onClose: () => void;
 }
 
@@ -50,7 +50,7 @@ const MoodResults = ({
             onPress={() => onAnimePress(anime.id)}
           >
             <Image
-              source={{ uri: anime.cover_image || anime.image_url }}
+              source={{ uri: anime.cover_image_url || anime.image_url }}
               style={styles.animeImage}
               resizeMode="cover"
             />
@@ -60,11 +60,11 @@ const MoodResults = ({
               </Typography>
               
               <View style={styles.animeMetaRow}>
-                {anime.score && (
+                {anime.rating && (
                   <View style={styles.metaItem}>
                     <Star size={14} color={colors.warning} />
                     <Typography variant="caption" color={colors.textSecondary} style={styles.metaText}>
-                      {anime.score.toFixed(1)}
+                      {anime.rating.toFixed(1)}
                     </Typography>
                   </View>
                 )}
