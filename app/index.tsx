@@ -20,7 +20,7 @@ import useUserAnimeLists from "@/hooks/useUserAnimeLists";
 export default function HomeScreen() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showMenuDrawer, setShowMenuDrawer] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -500,9 +500,11 @@ export default function HomeScreen() {
           showSearch={true}
           showNotifications={true}
           showMenu={true}
+          showAdmin={role === 'admin'}
           onSearchPress={handleSearchPress}
           onNotificationsPress={() => handleMenuItemPress("notifications")}
           onMenuPress={handleMenuPress}
+          onAdminPress={() => router.push('/admin')}
           notificationCount={notificationCount}
         />
 

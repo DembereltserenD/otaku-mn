@@ -10,7 +10,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { useRouter, usePathname } from "expo-router";
-import { Home, Heart, User, Search, BookOpen } from "lucide-react-native";
+import { Home, Heart, User, Search, BookOpen, Shield, BarChart3, Settings } from "lucide-react-native";
 import { useTheme } from "@/context/ThemeProvider";
 import { useAuth } from "@/context/AuthContext";
 
@@ -19,6 +19,12 @@ interface NavItem {
   href: string;
   icon: typeof Home;
   activeIcon?: typeof Home;
+}
+
+interface AdminNavItem {
+  id: string;
+  label: string;
+  icon: typeof Home;
 }
 
 const navItems: NavItem[] = [
@@ -32,6 +38,11 @@ interface BottomNavigationProps {
   currentRoute?: string;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  // Admin-specific props
+  isAdminView?: boolean;
+  adminItems?: AdminNavItem[];
+  activeAdminItemId?: string;
+  onAdminItemClick?: (itemId: string) => void;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -46,8 +57,12 @@ const BottomNavigation = React.memo(function BottomNavigation({
   currentRoute,
   activeTab,
   onTabChange,
+  isAdminView = false,
+  adminItems = [],
+  activeAdminItemId,
+  onAdminItemClick,
 }: BottomNavigationProps = {}) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { colors, isDarkMode } = useTheme();
@@ -69,12 +84,23 @@ const BottomNavigation = React.memo(function BottomNavigation({
   // Use provided currentRoute or determine from pathname
   const activeRoute = currentRoute || pathname;
 
-  // Filter navItems to hide Library if not logged in
-  let filteredNavItems = navItems.filter(
-    (item) => item.name !== "Library" || !!user
-  );
+  // Filter navItems based on user role
+  let filteredNavItems = navItems.filter((item) => {
+    // For admin users, only show Search and Admin tabs
+    if (role === 'admin') {
+      return item.name === 'Search';
+    }
+    // For regular users, hide Library if not logged in
+    return item.name !== 'Library' || !!user;
+  });
   if (user) {
-    filteredNavItems.push({ name: "Profile", href: "/profile", icon: User });
+    // For admin users, only add Admin tab
+    if (role === 'admin') {
+      filteredNavItems.push({ name: "Admin", href: "/admin", icon: Shield });
+    } else {
+      // For regular users, add Profile tab
+      filteredNavItems.push({ name: "Profile", href: "/profile", icon: User });
+    }
   } else {
     filteredNavItems.push({ name: "Sign In", href: "/login", icon: User });
   }
@@ -117,6 +143,78 @@ const BottomNavigation = React.memo(function BottomNavigation({
     [router, onTabChange, tabAnimations],
   );
 
+  // If in admin view, render admin navigation
+  if (isAdminView && adminItems.length > 0) {
+    return (
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            backgroundColor: '#0F172A', // Dark blue background for admin
+            borderTopColor: colors.border,
+            height: 70, // Taller height for horizontal layout
+            transform: [
+              {
+                translateY: barAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [100, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+        accessibilityRole="tablist"
+        accessibilityLabel="Admin bottom navigation"
+      >
+        <SafeAreaView style={styles.adminNavContainer}>
+        {adminItems.map((item) => {
+          const isActive = item.id === activeAdminItemId;
+          const IconComponent = item.icon;
+          
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.adminTabItem}
+              onPress={() => onAdminItemClick?.(item.id)}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+            >
+              {isActive && (
+                <View
+                  style={[
+                    styles.adminTabIndicator,
+                    {
+                      backgroundColor: '#10B981',
+                    },
+                  ]}
+                />
+              )}
+              <View style={isActive ? styles.adminActiveIconContainer : styles.adminIconContainer}>
+                <IconComponent
+                  size={22}
+                  color={isActive ? colors.card : colors.inactive}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.adminTabLabel,
+                  {
+                    color: isActive ? colors.primary : colors.inactive,
+                    marginLeft: 8,
+                  },
+                ]}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+        </SafeAreaView>
+      </Animated.View>
+    );
+  }
+  
+  // Regular user navigation
   return (
     <Animated.View
       style={[
@@ -227,6 +325,46 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
     zIndex: 9999,
+  },
+  // Admin specific styles
+  adminNavContainer: {
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-around",
+    paddingBottom: Platform.OS === "ios" ? 20 : 8,
+  },
+  adminTabItem: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    position: "relative",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginHorizontal: 4,
+  },
+  adminTabIndicator: {
+    position: "absolute",
+    left: 0,
+    width: 3,
+    height: '100%',
+    borderTopRightRadius: 3,
+    borderBottomRightRadius: 3,
+  },
+  adminTabLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#FFFFFF",
+  },
+  adminIconContainer: {
+    padding: 8,
+    marginRight: 8,
+  },
+  adminActiveIconContainer: {
+    backgroundColor: '#10B981',
+    padding: 8,
+    borderRadius: 20,
+    marginRight: 8,
   },
   safeArea: {
     width: "100%",

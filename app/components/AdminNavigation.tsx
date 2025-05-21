@@ -15,13 +15,19 @@ import {
 
 interface AdminNavigationProps {
   variant?: "sidebar" | "bottom";
+  onScreenChange?: (screenId: string) => void;
+  currentScreen?: string;
 }
 
 /**
  * AdminNavigation component provides consistent navigation across admin pages
  * with visual indication of the current active page.
  */
-const AdminNavigation = ({ variant = "sidebar" }: AdminNavigationProps) => {
+const AdminNavigation = ({ 
+  variant = "sidebar", 
+  onScreenChange, 
+  currentScreen = "dashboard" 
+}: AdminNavigationProps) => {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -56,10 +62,8 @@ const AdminNavigation = ({ variant = "sidebar" }: AdminNavigationProps) => {
     },
   ];
 
-  const isActive = (path: string) => {
-    if (path === "/admin" && pathname === "/admin") return true;
-    if (path !== "/admin" && pathname.startsWith(path)) return true;
-    return false;
+  const isActive = (id: string) => {
+    return id === currentScreen;
   };
 
   if (variant === "bottom") {

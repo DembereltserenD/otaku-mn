@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useColorScheme as useNativeColorScheme } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PropsWithChildren } from 'react';
 
 // Define our theme colors
@@ -49,46 +50,130 @@ export const darkTheme = {
   overlay: 'rgba(0, 0, 0, 0.75)', // Modal overlay
 };
 
+// Black theme for admin section
+export const blackTheme = {
+  primary: '#3DAC7F', // Brighter green for better contrast on black
+  primaryLight: '#4FBE91', // Even lighter green for hover states
+  primaryDark: '#2C9A6D', // Darker green for pressed states
+  secondary: '#F47F89', // Brighter red for better contrast
+  secondaryLight: '#F8A1A9', // Even lighter red for hover states
+  secondaryDark: '#F05D69', // Darker red for pressed states
+  background: '#000000', // Pure black background for admin
+  text: '#FFFFFF', // White text for maximum contrast
+  textSecondary: '#E2E8F0', // Very light gray for secondary text
+  border: '#2D3748', // Dark border with slight visibility
+  success: '#4ADE80', // Bright green for success states
+  error: '#FB7185', // Bright red for error states
+  warning: '#FCD34D', // Bright yellow for warning states
+  info: '#7DD3FC', // Bright blue for info states
+  card: '#111827', // Very dark card background
+  cardHover: '#1F2937', // Slightly lighter for hover states
+  inactive: '#6B7280', // Medium gray for inactive states
+  skeleton: '#1F2937', // Dark loading skeleton
+  overlay: 'rgba(0, 0, 0, 0.9)', // Nearly opaque overlay
+};
+
 type ThemeColors = typeof lightTheme;
 
+export type ThemeMode = 'light' | 'dark' | 'black';
+
 type ThemeContextType = {
+  themeMode: ThemeMode;
   isDarkMode: boolean;
+  isAdminMode: boolean;
   toggleTheme: () => void;
+  setThemeMode: (mode: ThemeMode) => void;
   colors: ThemeColors;
 };
 
 const ThemeContext = createContext<ThemeContextType>({
+  themeMode: 'dark',
   isDarkMode: true,
+  isAdminMode: false,
   toggleTheme: () => { },
+  setThemeMode: () => { },
   colors: darkTheme,
 });
 
+const THEME_STORAGE_KEY = 'otaku_mn_theme_mode';
+
 /**
  * ThemeProvider component that provides theme context for the application
- * Manages dark/light mode state and provides methods to toggle theme
+ * Manages theme modes (light/dark/black) and provides methods to toggle and set themes
  */
 export function ThemeProvider({ children }: PropsWithChildren) {
   // Get device color scheme
   const deviceColorScheme = useNativeColorScheme();
-  // Default to dark mode
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  // State for theme mode - can be 'light', 'dark', or 'black' (admin)
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
 
-  // Initialize theme based on device preference, but allow user toggle
+  // Load saved theme preference from storage
   useEffect(() => {
-    // Initialize with device preference, defaulting to dark if not available
-    setIsDarkMode(deviceColorScheme === 'dark' || deviceColorScheme === null);
+    const loadThemePreference = async () => {
+      try {
+        const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'black')) {
+          setThemeMode(savedTheme as ThemeMode);
+        } else {
+          // Initialize with device preference, defaulting to dark if not available
+          setThemeMode(deviceColorScheme === 'dark' || deviceColorScheme === null ? 'dark' : 'light');
+        }
+      } catch (error) {
+        console.error('Error loading theme preference:', error);
+        // Default to device preference if storage fails
+        setThemeMode(deviceColorScheme === 'dark' || deviceColorScheme === null ? 'dark' : 'light');
+      }
+    };
+
+    loadThemePreference();
   }, [deviceColorScheme]);
 
-  // Toggle theme function
+  // Save theme preference when it changes
+  useEffect(() => {
+    const saveThemePreference = async () => {
+      try {
+        await AsyncStorage.setItem(THEME_STORAGE_KEY, themeMode);
+      } catch (error) {
+        console.error('Error saving theme preference:', error);
+      }
+    };
+
+    saveThemePreference();
+  }, [themeMode]);
+
+  // Toggle between light and dark mode (excluding black admin mode)
   const toggleTheme = () => {
-    setIsDarkMode((prev) => !prev);
+    setThemeMode((prev) => {
+      if (prev === 'black') return 'light'; // If in admin black mode, switch to light
+      return prev === 'light' ? 'dark' : 'light'; // Otherwise toggle between light and dark
+    });
   };
 
+  // Set a specific theme mode
+  const setSpecificThemeMode = (mode: ThemeMode) => {
+    setThemeMode(mode);
+  };
+
+  // Derived states
+  const isDarkMode = themeMode === 'dark' || themeMode === 'black';
+  const isAdminMode = themeMode === 'black';
+
   // Select the appropriate theme based on mode
-  const colors = isDarkMode ? darkTheme : lightTheme;
+  const colors = {
+    'light': lightTheme,
+    'dark': darkTheme,
+    'black': blackTheme
+  }[themeMode];
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleTheme, colors }}>
+    <ThemeContext.Provider value={{
+      themeMode,
+      isDarkMode,
+      isAdminMode,
+      toggleTheme,
+      setThemeMode: setSpecificThemeMode,
+      colors
+    }}>
       {children}
     </ThemeContext.Provider>
   );
